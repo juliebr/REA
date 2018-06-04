@@ -1,0 +1,97 @@
+
+- name: Create VPC and subnets
+  ec2_vpc_net:
+    state: present
+    cidr_block: "{{ vpc_cidr_block }}"
+    region: "{{ aws_region }}"
+    dns_hostnames: true
+    name: vpc-ecs
+  register: vpc
+
+
+- debug: var=vpc
+
+- name: Set facts for later
+  set_fact:
+    vpc_id: "{{ vpc.vpc.id }}"
+  when: vpc.vpc is defined and vpc.vpc.id != ''
+
+- name: Create Internet Gateway and attach it to VPC
+  ec2_vpc_igw:
+    vpc_id: "{{ vpc_id }}"
+    region: "{{ aws_region }}"
+    state: present
+  register: igw
+
+
+- name: Create private subnet 
+  ec2_vpc_subnet:
+    state: present
+    vpc_id: "{{ vpc_id }}"
+    cidr: "{{ private_subnet }}"
+    region: "{{ aws_region }}"
+    resource_tags:
+      Name: private_subnet
+  register: priv_subnet
+
+- name: Create public subnet 
+  ec2_vpc_subnet:
+    state: present
+    vpc_id: "{{ vpc_id }}"
+    cidr: "{{ public_subnet }}"
+    region: "{{ aws_region }}"
+    resource_tags:
+      Name: public_subnet
+  register: pub_subnet
+ 
+
+- set_fact: 
+    priv_subnet_id: "{{ priv_subnet.subnet.id }}"
+
+
+- set_fact: 
+    pub_subnet_id: "{{ pub_subnet.subnet.id }}"
+
+
+
+- name: Create route table for private subnet
+  ec2_vpc_route_table:
+    vpc_id: "{{ vpc_id }}"
+    region: "{{ aws_region }}"
+    tags: 
+      Name: private_subnet_route_table
+    subnets:
+      - "{{ private_subnet }}"
+    routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ igw.gateway_id }}"
+  register: priv_route_table
+
+
+- name: Create route table for public subnet
+  ec2_vpc_route_table:
+    vpc_id: "{{ vpc_id }}"
+    region: "{{ aws_region }}"
+    tags: 
+      Name: public_subnet_route_table
+    subnets:
+      - "{{ public_subnet }}"
+    routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ igw.gateway_id }}"
+  register: pub_route_table
+
+
+- name: Allow  connections on port 9292 to the members of this Security group
+  ec2_group:
+    name: private_subnet_sg
+    description: Custom Security Group
+    vpc_id: "{{ vpc_id }}"
+    region: "{{ aws_region }}"
+    rules:
+      - proto: tcp
+        ports: 9292
+        cidr_ip: "0.0.0.0/0"
+      - proto: all
+        group_name: private_subnet_sg
+  register: private_subnet_sg

@@ -1,0 +1,16 @@
+# Build image
+- name: Build docker image for Sinatra
+  hosts: localhost
+  connection: local
+  gather_facts: False
+
+  vars_files:
+    - group_vars/all
+  
+  environment:
+    AWS_REGION: "{{ aws_region }}"
+
+
+  roles:
+    - local_build
+

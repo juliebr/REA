@@ -1,0 +1,43 @@
+#Create ECS task definition
+# Fargate not supported yet by this ansible module" https://github.com/ansible/ansible/issues/35607
+# - name: Create task definition
+#   ecs_taskdefinition:
+#     state: present
+#     family: ecs_sinatra
+#     containers:
+#     - name: sinatra-app
+#       cpu: 2
+#       essential: true
+#       image: "sinatra"
+#       memory: 300
+#       # mountPoints:
+#       # - containerPath: /usr/local/apache2/htdocs
+#       #   sourceVolume: my-vol
+#       portMappings:
+#       - containerPort: 9292
+#         hostPort: 80
+#       logConfiguration:
+#         logDriver: awslogs
+#         options:
+#           awslogs-group: ecs
+#           awslogs-region: "{{ aws_region }}"
+
+- name: Create ECS cluster
+  shell: aws ecs create-cluster --cluster-name default
+
+- name: Create ECS task definition
+  shell: "aws ecs register-task-definition --cli-input-json file://{{ playbook_dir }}/roles/ecs/files/ecs_task_definition.json"
+
+
+#Start ECS service
+# - ecs_service:
+#     state: present
+#     name: sinatra
+#     cluster: default
+#     task_definition: ecs_sinatra
+#     desired_count: 1
+
+- name: Create service
+  shell: >
+    aws ecs create-service --cluster default --service-name sinatra-service --task-definition ecs_sinatra:1 --desired-count 1
+    --launch-type "FARGATE" --network-configuration "awsvpcConfiguration={subnets=[{{ priv_subnet_id }}],securityGroups=[{{ private_subnet_sg }}]}"

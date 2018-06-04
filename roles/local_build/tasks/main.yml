@@ -1,0 +1,26 @@
+#get app codebase
+- name:
+  git:
+    repo: 'https://github.com/rea-cruitment/simple-sinatra-app.git'
+    dest: "{{ playbook_dir }}/roles/local_build/files/simple-sinatra"
+
+
+#Create an AWS registry
+- name: Create an AWS ECR to store docker image
+  ecs_ecr: 
+    name: sinatra
+
+- name: build the docker image
+  shell: "docker build -t {{ aws_account_id }}.dkr.ecr.{{ aws_region }}.amazonaws.com/sinatra {{ playbook_dir }}/roles/local_build/files/" 
+
+#Authenticate to ECR 
+- name: Login to ECR
+  shell: "$(aws ecr get-login --no-include-email --region {{ aws_region }})"
+
+#build docker image  and push it to the above registry
+- name: upload it to ECR
+#   shell: "docker push {{ aws_account_id }}.dkr.ecr.{{ aws_region }}.amazonaws.com/sinatra
+  docker_image:
+    path: "{{ playbook_dir }}/roles/local_build/files/"
+    name: "{{ aws_account_id }}.dkr.ecr.{{ aws_region }}.amazonaws.com/sinatra"
+    push: yes

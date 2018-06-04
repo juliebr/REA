@@ -1,0 +1,23 @@
+{
+    "family": "ecs_sinatra", 
+    "networkMode": "awsvpc", 
+    "containerDefinitions": [
+        {
+            "name": "sinatra-app", 
+            "image": "sinatra", 
+            "portMappings": [
+                {
+                    "containerPort": 9292, 
+                    "hostPort": 9292, 
+                    "protocol": "tcp"
+                }
+            ], 
+            "essential": true
+        }
+    ], 
+    "requiresCompatibilities": [
+        "FARGATE"
+    ], 
+    "cpu": "256", 
+    "memory": "512"
+}

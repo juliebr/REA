@@ -1,0 +1,3 @@
+- include: build_image.yml
+- include: infra.yml
+- include: launch_app.yml
